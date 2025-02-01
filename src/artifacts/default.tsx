@@ -53,6 +53,7 @@ interface Option {
     german: number;
     indian: number;
   };
+  duration: number;
 }
 
 const DateSchedule: React.FC<DateScheduleProps> = ({ startDate, endDate, holidays, hybridDays }) => {
@@ -145,7 +146,7 @@ const TripAnalysisTable: React.FC = () => {
   // State definitions with types
   const [sortField, setSortField] = useState<string>('totalCost');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [selectedDuration, setSelectedDuration] = useState<number>(6);
+  const [selectedDurations, setSelectedDurations] = useState<number[]>([]);
   
   const [maxPriceHasan, setMaxPriceHasan] = useState<string>('');
   const [maxPriceHatim, setMaxPriceHatim] = useState<string>('');
@@ -299,64 +300,72 @@ const TripAnalysisTable: React.FC = () => {
   };
 
   const generateDateAnalysis = (): Option[] => {
+    // If no durations are selected, return an empty array
+    if (selectedDurations.length === 0) {
+      return [];
+    }
+
     const combinations: Option[] = [];
     
     for (let startDate = 1; startDate <= 34; startDate++) {
-      const endDate = startDate + selectedDuration - 1;
-      if (endDate > 40) continue;
-
-      const startIdx = startDate <= 30 ? startDate - 1 : startDate - 31;
-      const endIdx = endDate <= 30 ? endDate - 1 : endDate - 31;
-      const startMonthKey = startDate <= 30 ? 'april' : 'may';
-      const endMonthKey = endDate <= 30 ? 'april' : 'may';
-
-      const hasanOutbound = roundPrices ? roundToNearest500(prices.hasanOutbound[startMonthKey][startIdx]) : prices.hasanOutbound[startMonthKey][startIdx];
-      const hasanReturn = roundPrices ? roundToNearest500(prices.hasanReturn[endMonthKey][endIdx]) : prices.hasanReturn[endMonthKey][endIdx];
-      const hatimOutbound = roundPrices ? roundToNearest500(prices.hatimOutbound[startMonthKey][startIdx]) : prices.hatimOutbound[startMonthKey][startIdx];
-      const hatimReturn = roundPrices ? roundToNearest500(prices.hatimReturn[endMonthKey][endIdx]) : prices.hatimReturn[endMonthKey][endIdx];
-      const hussainOutbound = roundPrices ? roundToNearest500(prices.hussainOutbound[startMonthKey][startIdx]) : prices.hussainOutbound[startMonthKey][startIdx];
-      const hussainReturn = roundPrices ? roundToNearest500(prices.hussainReturn[endMonthKey][endIdx]) : prices.hussainReturn[endMonthKey][endIdx];
+      for (const duration of (selectedDurations.length > 0 ? selectedDurations : [6, 7, 8, 9, 10])) {
+        const endDate = startDate + duration - 1;
+        if (endDate > 40) continue;
   
-      const startDateObj = new Date(2025, startDate <= 30 ? 3 : 4, startDate <= 30 ? startDate : startDate - 30);
-      const endDateObj = new Date(2025, endDate <= 30 ? 3 : 4, endDate <= 30 ? endDate : endDate - 30);
-      startDateObj.setHours(12, 0, 0, 0);
-      endDateObj.setHours(12, 0, 0, 0);
+        const startIdx = startDate <= 30 ? startDate - 1 : startDate - 31;
+        const endIdx = endDate <= 30 ? endDate - 1 : endDate - 31;
+        const startMonthKey = startDate <= 30 ? 'april' : 'may';
+        const endMonthKey = endDate <= 30 ? 'april' : 'may';
   
-      const specialDays = getSpecialDays(startDateObj, endDateObj);
-
-      const germanLeaves = getWorkingDays(startDateObj, endDateObj, specialDays.holidays.german);
-      const indianLeaves = getWorkingDays(
-        startDateObj, 
-        endDateObj, 
-        specialDays.holidays.indian,
-        specialDays.hybridDays.hatim
-      );
-
-      const weekendCount = getWeekendCount(startDateObj, endDateObj);
-
-      const option = {
-        dates: {
-          start: `${startDate <= 30 ? 'April' : 'May'} ${startDate <= 30 ? startDate : startDate - 30}`,
-          end: `${endDate <= 30 ? 'April' : 'May'} ${endDate <= 30 ? endDate : endDate - 30}`
-        },
-        holidays: specialDays.holidays,
-        hybridDays: specialDays.hybridDays,
-        weekends: weekendCount,
-        costs: {
-          hasan: hasanOutbound + hasanReturn,
-          hatim: hatimOutbound + hatimReturn,
-          hussain: hussainOutbound + hussainReturn,
-          total: hasanOutbound + hasanReturn + hatimOutbound + hatimReturn + hussainOutbound + hussainReturn
-        },
-        leaves: {
-          german: germanLeaves,
-          indian: indianLeaves
-        }      
-      };
-
-      combinations.push(option);
+        const hasanOutbound = roundPrices ? roundToNearest500(prices.hasanOutbound[startMonthKey][startIdx]) : prices.hasanOutbound[startMonthKey][startIdx];
+        const hasanReturn = roundPrices ? roundToNearest500(prices.hasanReturn[endMonthKey][endIdx]) : prices.hasanReturn[endMonthKey][endIdx];
+        const hatimOutbound = roundPrices ? roundToNearest500(prices.hatimOutbound[startMonthKey][startIdx]) : prices.hatimOutbound[startMonthKey][startIdx];
+        const hatimReturn = roundPrices ? roundToNearest500(prices.hatimReturn[endMonthKey][endIdx]) : prices.hatimReturn[endMonthKey][endIdx];
+        const hussainOutbound = roundPrices ? roundToNearest500(prices.hussainOutbound[startMonthKey][startIdx]) : prices.hussainOutbound[startMonthKey][startIdx];
+        const hussainReturn = roundPrices ? roundToNearest500(prices.hussainReturn[endMonthKey][endIdx]) : prices.hussainReturn[endMonthKey][endIdx];
+    
+        const startDateObj = new Date(2025, startDate <= 30 ? 3 : 4, startDate <= 30 ? startDate : startDate - 30);
+        const endDateObj = new Date(2025, endDate <= 30 ? 3 : 4, endDate <= 30 ? endDate : endDate - 30);
+        startDateObj.setHours(12, 0, 0, 0);
+        endDateObj.setHours(12, 0, 0, 0);
+    
+        const specialDays = getSpecialDays(startDateObj, endDateObj);
+  
+        const germanLeaves = getWorkingDays(startDateObj, endDateObj, specialDays.holidays.german);
+        const indianLeaves = getWorkingDays(
+          startDateObj, 
+          endDateObj, 
+          specialDays.holidays.indian,
+          specialDays.hybridDays.hatim
+        );
+  
+        const weekendCount = getWeekendCount(startDateObj, endDateObj);
+  
+        const option = {
+          dates: {
+            start: `${startDate <= 30 ? 'April' : 'May'} ${startDate <= 30 ? startDate : startDate - 30}`,
+            end: `${endDate <= 30 ? 'April' : 'May'} ${endDate <= 30 ? endDate : endDate - 30}`
+          },
+          holidays: specialDays.holidays,
+          hybridDays: specialDays.hybridDays,
+          weekends: weekendCount,
+          duration: duration,
+          costs: {
+            hasan: hasanOutbound + hasanReturn,
+            hatim: hatimOutbound + hatimReturn,
+            hussain: hussainOutbound + hussainReturn,
+            total: hasanOutbound + hasanReturn + hatimOutbound + hatimReturn + hussainOutbound + hussainReturn
+          },
+          leaves: {
+            german: germanLeaves,
+            indian: indianLeaves
+          }      
+        };
+  
+        combinations.push(option);
+      }
     }
-
+  
     return combinations;
   };
 
@@ -373,14 +382,19 @@ const TripAnalysisTable: React.FC = () => {
   const filteredOptions = useMemo(() => {
     const options: Option[] = generateDateAnalysis();
     return options.filter(option => {
-      // If max price is not set (empty string), consider it as no constraint
       const hasanConstraint = maxPriceHasan === '' || option.costs.hasan <= Number(maxPriceHasan);
       const hatimConstraint = maxPriceHatim === '' || option.costs.hatim <= Number(maxPriceHatim);
       const hussainConstraint = maxPriceHussain === '' || option.costs.hussain <= Number(maxPriceHussain);
   
       return hasanConstraint && hatimConstraint && hussainConstraint;
     });
-  }, [selectedDuration, debouncedMaxPriceHasan, debouncedMaxPriceHatim, debouncedMaxPriceHussain, roundPrices]);
+  }, [
+    selectedDurations, 
+    debouncedMaxPriceHasan, 
+    debouncedMaxPriceHatim, 
+    debouncedMaxPriceHussain, 
+    roundPrices
+  ]);
   
   const sortedOptions = _.orderBy(
     filteredOptions,
@@ -391,6 +405,9 @@ const TripAnalysisTable: React.FC = () => {
       if (sortField === 'leaves') {
         // Sort by total leaves, then by German leaves as tiebreaker
         return (option.leaves.german + option.leaves.indian) * 100 + option.leaves.german;
+      }
+      if (sortField === 'duration') {
+        return option.duration;
       }
       return option.costs[sortField as keyof typeof option.costs];
     }],
@@ -404,16 +421,26 @@ const TripAnalysisTable: React.FC = () => {
           <div className="flex items-center justify-between">
             <span>Trip Analysis Table</span>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-normal">Duration:</span>
-              <select 
-                value={selectedDuration}
-                onChange={(e) => setSelectedDuration(Number(e.target.value))}
-                className="px-3 py-1 border rounded-md text-sm"
-              >
+              <span className="text-sm font-normal">Trip Durations:</span>
+              <div className="flex gap-2">
                 {[6, 7, 8, 9, 10].map((days) => (
-                  <option key={days} value={days}>{days} days</option>
+                  <label key={days} className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedDurations.includes(days)}
+                      onChange={() => {
+                        setSelectedDurations(prev => 
+                          prev.includes(days) 
+                            ? prev.filter(d => d !== days)
+                            : [...prev, days]
+                        );
+                      }}
+                      className="form-checkbox h-4 w-4 mr-1"
+                    />
+                    <span className="text-sm">{days} days</span>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-normal">Round Prices:</span>
@@ -499,6 +526,12 @@ const TripAnalysisTable: React.FC = () => {
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </th>
+                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('duration')}>
+                  <div className="flex items-center justify-end gap-2">
+                    Duration
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </th>
                 <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('hasan')}>
                   <div className="flex items-center justify-end gap-2">
                     Hasan Cost
@@ -533,17 +566,7 @@ const TripAnalysisTable: React.FC = () => {
             </thead>
             <tbody>
               {sortedOptions.map((option, index) => (
-                  <tr key={index} className={`border-b hover:bg-gray-50 ${
-                    option.holidays.german.length > 0 && option.holidays.indian.length > 0
-                      ? 'bg-green-50'
-                      : option.holidays.german.length > 0
-                      ? 'bg-blue-50'
-                      : option.holidays.indian.length > 0
-                      ? 'bg-yellow-50'
-                      : option.hybridDays.hatim.length > 0
-                      ? 'bg-purple-50'
-                      : ''
-                  }`}>
+                <tr key={index} className={`border-b hover:bg-gray-50 ${option.holidays.german.length > 0 && option.holidays.indian.length > 0 ? 'bg-green-50' : option.holidays.german.length > 0 ? 'bg-blue-50' : option.holidays.indian.length > 0 ? 'bg-yellow-50' : option.hybridDays.hatim.length > 0 ? 'bg-purple-50' : ''}`}>
                   <td className="p-2">
                     <div className="flex items-center justify-between cursor-pointer"
                         onClick={() => toggleRowExpansion(index)}>
@@ -568,21 +591,14 @@ const TripAnalysisTable: React.FC = () => {
                     )}
                     {expandedRows.has(index) && (
                     <DateSchedule
-                      startDate={new Date(
-                        2025,
-                        option.dates.start.includes('April') ? 3 : 4,
-                        parseInt(option.dates.start.split(' ')[1])
-                      )}
-                      endDate={new Date(
-                        2025,
-                        option.dates.end.includes('April') ? 3 : 4,
-                        parseInt(option.dates.end.split(' ')[1])
-                      )}
+                      startDate={new Date(2025, option.dates.start.includes('April') ? 3 : 4, parseInt(option.dates.start.split(' ')[1]))}
+                      endDate={new Date(2025, option.dates.end.includes('April') ? 3 : 4, parseInt(option.dates.end.split(' ')[1]))}
                       holidays={option.holidays}
                       hybridDays={option.hybridDays}
                     />
                   )}
                   </td>
+                  <td className="p-2 text-right">{option.duration} days</td>
                   <td className="p-2 text-right">₹{option.costs.hasan.toLocaleString()}</td>
                   <td className="p-2 text-right">₹{option.costs.hatim.toLocaleString()}</td>
                   <td className="p-2 text-right">₹{option.costs.hussain.toLocaleString()}</td>
