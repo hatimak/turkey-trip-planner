@@ -1,17 +1,68 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ArrowUpDown } from 'lucide-react';
-import _ from 'lodash';
-import { debounce } from 'lodash';
+import _, { debounce } from 'lodash';
 
-const DateSchedule = ({ startDate, endDate, holidays, hybridDays }) => {
-  const getDates = (start, end) => {
-    const dates = [];
-    // Create dates with noon time to avoid timezone issues
+// Interface definitions
+interface DateScheduleProps {
+  startDate: Date;
+  endDate: Date;
+  holidays: {
+    german: string[];
+    indian: string[];
+  };
+  hybridDays: {
+    hatim: string[];
+  };
+}
+
+interface PriceData {
+  april: number[];
+  may: number[];
+}
+
+interface Prices {
+  hasanOutbound: PriceData;
+  hasanReturn: PriceData;
+  hatimOutbound: PriceData;
+  hatimReturn: PriceData;
+  hussainOutbound: PriceData;
+  hussainReturn: PriceData;
+}
+
+interface Option {
+  dates: {
+    start: string;
+    end: string;
+  };
+  holidays: {
+    german: string[];
+    indian: string[];
+  };
+  hybridDays: {
+    hatim: string[];
+  };
+  weekends: number;
+  costs: {
+    hasan: number;
+    hatim: number;
+    hussain: number;
+    total: number;
+  };
+  leaves: {
+    german: number;
+    indian: number;
+  };
+}
+
+const DateSchedule: React.FC<DateScheduleProps> = ({ startDate, endDate, holidays, hybridDays }) => {
+  const getDates = (start: Date, end: Date): Date[] => {
+    const dates: Date[] = [];
     const currDate = new Date(start);
-    currDate.setHours(12, 0, 0, 0);  // Set to noon
+    currDate.setHours(12, 0, 0, 0);
     const lastDate = new Date(end);
-    lastDate.setHours(12, 0, 0, 0);  // Set to noon
+    lastDate.setHours(12, 0, 0, 0);
+    
     while (currDate <= lastDate) {
       dates.push(new Date(currDate));
       currDate.setDate(currDate.getDate() + 1);
@@ -19,7 +70,7 @@ const DateSchedule = ({ startDate, endDate, holidays, hybridDays }) => {
     return dates;
   };
 
-  const getDateClass = (date) => {
+  const getDateClass = (date: Date): string => {
     const dateStr = date.toISOString().split('T')[0];
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const isGermanHoliday = holidays.german.includes(dateStr);
@@ -44,19 +95,16 @@ const DateSchedule = ({ startDate, endDate, holidays, hybridDays }) => {
     return '';
   };
 
-  const getDateLabel = (date) => {
+  const getDateLabel = (date: Date): string => {
     const dateStr = date.toISOString().split('T')[0];
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const isGermanHoliday = holidays.german.includes(dateStr);
     const isIndianHoliday = holidays.indian.includes(dateStr);
     const isHybridDay = hybridDays.hatim.includes(dateStr);
   
-    // If it's a weekend, that takes precedence over everything else
     if (isWeekend) {
       return '🗓️ Weekend';
     }
-  
-    // For non-weekend days, check holidays first, then hybrid days
     if (isGermanHoliday && isIndianHoliday) {
       return '🇩🇪 🇮🇳 Holiday';
     }
@@ -69,8 +117,7 @@ const DateSchedule = ({ startDate, endDate, holidays, hybridDays }) => {
     if (isHybridDay) {
       return '💻 Hybrid Day';
     }
-    
-    return ''; // Regular working day
+    return '';
   };
 
   const dates = getDates(new Date(startDate), new Date(endDate));
@@ -94,29 +141,29 @@ const DateSchedule = ({ startDate, endDate, holidays, hybridDays }) => {
   );
 };
 
-const TripAnalysisTable = () => {
-  const [sortField, setSortField] = useState('totalCost');
-  const [sortDirection, setSortDirection] = useState('asc');
-  const [selectedDuration, setSelectedDuration] = useState(6);
+const TripAnalysisTable: React.FC = () => {
+  // State definitions with types
+  const [sortField, setSortField] = useState<string>('totalCost');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [selectedDuration, setSelectedDuration] = useState<number>(6);
   
-  // New state for maximum price constraints
-  const [maxPriceHasan, setMaxPriceHasan] = useState('');
-  const [maxPriceHatim, setMaxPriceHatim] = useState('');
-  const [maxPriceHussain, setMaxPriceHussain] = useState('');
-  const [debouncedMaxPriceHasan, setDebouncedMaxPriceHasan] = useState('');
-  const [debouncedMaxPriceHatim, setDebouncedMaxPriceHatim] = useState('');
-  const [debouncedMaxPriceHussain, setDebouncedMaxPriceHussain] = useState('');
+  const [maxPriceHasan, setMaxPriceHasan] = useState<string>('');
+  const [maxPriceHatim, setMaxPriceHatim] = useState<string>('');
+  const [maxPriceHussain, setMaxPriceHussain] = useState<string>('');
+  const [debouncedMaxPriceHasan, setDebouncedMaxPriceHasan] = useState<string>('');
+  const [debouncedMaxPriceHatim, setDebouncedMaxPriceHatim] = useState<string>('');
+  const [debouncedMaxPriceHussain, setDebouncedMaxPriceHussain] = useState<string>('');
 
-  const [expandedRows, setExpandedRows] = useState(new Set());
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const debouncedSetPrice = useCallback(
-    debounce((setter, value) => {
+    debounce((setter: (value: string) => void, value: string) => {
       setter(value);
     }, 400),
     []
   );
 
-  const toggleRowExpansion = (index) => {
+  const toggleRowExpansion = (index: number): void => {
     const newExpandedRows = new Set(expandedRows);
     if (newExpandedRows.has(index)) {
       newExpandedRows.delete(index);
@@ -126,7 +173,8 @@ const TripAnalysisTable = () => {
     setExpandedRows(newExpandedRows);
   };
 
-  const prices = {
+  // Define prices as Prices type
+  const prices: Prices = {
     hasanOutbound: {
       april: [11021,4547,8535,13860,15062,13410,11038,9093,8789,12665,12766,13309,15019,11723,11672,8237,9839,9155,6120,8981,5056,4547,4740,4547,5878,4547,4547,6287,4547,8092],
       may: [9482,6231,4786,8308,6683,4786,4786,4786,4967,6954,6773,6592,6502,6502,11017,6954,5148,7134,6773,8760,10205,9482,12914,13365,11559,11108,10746,4606,11920,8399]
@@ -154,23 +202,21 @@ const TripAnalysisTable = () => {
   };
 
   const HOLIDAYS = {
-    german: ['2025-04-18', '2025-04-21'],
-    indian: ['2025-04-18', '2025-05-01']
+    german: ['2025-04-18', '2025-04-21'] as string[],
+    indian: ['2025-04-18', '2025-05-01'] as string[]
   };
 
   const HYBRID_DAYS = {
-    hatim: ['2025-05-02']  // WFH day
+    hatim: ['2025-05-02'] as string[]
   };
 
-  const getSpecialDays = (startDateStr, endDateStr) => {
-    // Create normalized dates at noon
-    const start = new Date(startDateStr);
+  const getSpecialDays = (startDateStr: Date, endDateStr: Date) => {
+    const start = startDateStr;
+    const end = endDateStr;
     start.setHours(12, 0, 0, 0);
-    const end = new Date(endDateStr);
     end.setHours(12, 0, 0, 0);
     
-    // Helper to create normalized date string
-    const toDateString = (date) => {
+    const toDateString = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
@@ -202,8 +248,13 @@ const TripAnalysisTable = () => {
       }
     };
   };
-
-  const getWorkingDays = (startDate, endDate, holidays, hybridDays = []) => {
+  
+  const getWorkingDays = (
+    startDate: Date, 
+    endDate: Date, 
+    holidays: string[], 
+    hybridDays: string[] = []
+  ): number => {
     let count = 0;
     const curDate = new Date(startDate);
     
@@ -214,7 +265,7 @@ const TripAnalysisTable = () => {
       if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         if (!holidays.includes(dateString)) {
           if (hybridDays.includes(dateString)) {
-            count += 0.5; // Count hybrid days as half days
+            count += 0.5;
           } else {
             count += 1;
           }
@@ -226,8 +277,8 @@ const TripAnalysisTable = () => {
     
     return count;
   };
-
-  const getWeekendCount = (startDate, endDate) => {
+  
+  const getWeekendCount = (startDate: Date, endDate: Date): number => {
     let count = 0;
     const curDate = new Date(startDate);
     
@@ -242,33 +293,33 @@ const TripAnalysisTable = () => {
     return count;
   };
 
-  const generateDateAnalysis = () => {
-    const combinations = [];
+  const generateDateAnalysis = (): Option[] => {
+    const combinations: Option[] = [];
     
     for (let startDate = 1; startDate <= 34; startDate++) {
       const endDate = startDate + selectedDuration - 1;
       if (endDate > 40) continue;
-
+  
       const startIdx = startDate <= 30 ? startDate - 1 : startDate - 31;
       const endIdx = endDate <= 30 ? endDate - 1 : endDate - 31;
       const startMonthKey = startDate <= 30 ? 'april' : 'may';
       const endMonthKey = endDate <= 30 ? 'april' : 'may';
-
+  
       const hasanOutbound = prices.hasanOutbound[startMonthKey][startIdx];
       const hasanReturn = prices.hasanReturn[endMonthKey][endIdx];
       const hatimOutbound = prices.hatimOutbound[startMonthKey][startIdx];
       const hatimReturn = prices.hatimReturn[endMonthKey][endIdx];
       const hussainOutbound = prices.hussainOutbound[startMonthKey][startIdx];
       const hussainReturn = prices.hussainReturn[endMonthKey][endIdx];
-
-      const startDateObj = new Date(2025, startDate <= 30 ? 3 : 4, 
-        startDate <= 30 ? startDate : startDate - 30);
-      startDateObj.setHours(12, 0, 0, 0);  // Set to noon
-      
-      const endDateObj = new Date(2025, endDate <= 30 ? 3 : 4, 
-        endDate <= 30 ? endDate : endDate - 30);
-      endDateObj.setHours(12, 0, 0, 0);  // Set to noon
+  
+      const startDateObj = new Date(2025, startDate <= 30 ? 3 : 4, startDate <= 30 ? startDate : startDate - 30);
+      const endDateObj = new Date(2025, endDate <= 30 ? 3 : 4, endDate <= 30 ? endDate : endDate - 30);
+      startDateObj.setHours(12, 0, 0, 0);
+      endDateObj.setHours(12, 0, 0, 0);
+  
       const specialDays = getSpecialDays(startDateObj, endDateObj);
+  
+      // ... rest of your existing code
 
       const germanLeaves = getWorkingDays(startDateObj, endDateObj, specialDays.holidays.german);
       const indianLeaves = getWorkingDays(
@@ -306,20 +357,7 @@ const TripAnalysisTable = () => {
     return combinations;
   };
 
-  // Memoized options with price constraints
-  const filteredOptions = useMemo(() => {
-    const options = generateDateAnalysis();
-    return options.filter(option => {
-      // If max price is not set (empty string), consider it as no constraint
-      const hasanConstraint = maxPriceHasan === '' || option.costs.hasan <= Number(maxPriceHasan);
-      const hatimConstraint = maxPriceHatim === '' || option.costs.hatim <= Number(maxPriceHatim);
-      const hussainConstraint = maxPriceHussain === '' || option.costs.hussain <= Number(maxPriceHussain);
-
-      return hasanConstraint && hatimConstraint && hussainConstraint;
-    });
-  }, [selectedDuration, debouncedMaxPriceHasan, debouncedMaxPriceHatim, debouncedMaxPriceHussain]);
-
-  const handleSort = (field) => {
+  const handleSort = (field: string): void => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -327,10 +365,23 @@ const TripAnalysisTable = () => {
       setSortDirection('asc');
     }
   };
-
+  
+  // Memoized options with price constraints
+  const filteredOptions = useMemo(() => {
+    const options: Option[] = generateDateAnalysis();
+    return options.filter(option => {
+      // If max price is not set (empty string), consider it as no constraint
+      const hasanConstraint = maxPriceHasan === '' || option.costs.hasan <= Number(maxPriceHasan);
+      const hatimConstraint = maxPriceHatim === '' || option.costs.hatim <= Number(maxPriceHatim);
+      const hussainConstraint = maxPriceHussain === '' || option.costs.hussain <= Number(maxPriceHussain);
+  
+      return hasanConstraint && hatimConstraint && hussainConstraint;
+    });
+  }, [selectedDuration, debouncedMaxPriceHasan, debouncedMaxPriceHatim, debouncedMaxPriceHussain]);
+  
   const sortedOptions = _.orderBy(
     filteredOptions,
-    [(option) => {
+    [(option: Option) => {
       if (sortField === 'dates') {
         return option.dates.start;
       }
@@ -338,7 +389,7 @@ const TripAnalysisTable = () => {
         // Sort by total leaves, then by German leaves as tiebreaker
         return (option.leaves.german + option.leaves.indian) * 100 + option.leaves.german;
       }
-      return option.costs[sortField];
+      return option.costs[sortField as keyof typeof option.costs];
     }],
     [sortDirection]
   );
@@ -505,22 +556,20 @@ const TripAnalysisTable = () => {
                     )}
                     {expandedRows.has(index) && (
                     <DateSchedule
-                      startDate={(() => {
-                        const date = new Date(2025, option.dates.start.includes('April') ? 3 : 4, 
-                          parseInt(option.dates.start.split(' ')[1]));
-                        date.setHours(12, 0, 0, 0);  // Set to noon
-                        return date;
-                      })()}
-                      endDate={(() => {
-                        const date = new Date(2025, option.dates.end.includes('April') ? 3 : 4, 
-                          parseInt(option.dates.end.split(' ')[1]));
-                        date.setHours(12, 0, 0, 0);  // Set to noon
-                        return date;
-                      })()}
+                      startDate={new Date(
+                        2025,
+                        option.dates.start.includes('April') ? 3 : 4,
+                        parseInt(option.dates.start.split(' ')[1])
+                      )}
+                      endDate={new Date(
+                        2025,
+                        option.dates.end.includes('April') ? 3 : 4,
+                        parseInt(option.dates.end.split(' ')[1])
+                      )}
                       holidays={option.holidays}
                       hybridDays={option.hybridDays}
                     />
-                    )}
+                  )}
                   </td>
                   <td className="p-2 text-right">₹{option.costs.hasan.toLocaleString()}</td>
                   <td className="p-2 text-right">₹{option.costs.hatim.toLocaleString()}</td>
