@@ -155,6 +155,7 @@ const TripAnalysisTable: React.FC = () => {
   const [debouncedMaxPriceHussain, setDebouncedMaxPriceHussain] = useState<string>('');
 
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [roundPrices, setRoundPrices] = useState<boolean>(true);
 
   const debouncedSetPrice = useCallback(
     debounce((setter: (value: string) => void, value: string) => {
@@ -162,6 +163,10 @@ const TripAnalysisTable: React.FC = () => {
     }, 400),
     []
   );
+
+  const roundToNearest500 = (price: number): number => {
+    return Math.round(price / 500) * 500;
+  };
 
   const toggleRowExpansion = (index: number): void => {
     const newExpandedRows = new Set(expandedRows);
@@ -299,18 +304,18 @@ const TripAnalysisTable: React.FC = () => {
     for (let startDate = 1; startDate <= 34; startDate++) {
       const endDate = startDate + selectedDuration - 1;
       if (endDate > 40) continue;
-  
+
       const startIdx = startDate <= 30 ? startDate - 1 : startDate - 31;
       const endIdx = endDate <= 30 ? endDate - 1 : endDate - 31;
       const startMonthKey = startDate <= 30 ? 'april' : 'may';
       const endMonthKey = endDate <= 30 ? 'april' : 'may';
-  
-      const hasanOutbound = prices.hasanOutbound[startMonthKey][startIdx];
-      const hasanReturn = prices.hasanReturn[endMonthKey][endIdx];
-      const hatimOutbound = prices.hatimOutbound[startMonthKey][startIdx];
-      const hatimReturn = prices.hatimReturn[endMonthKey][endIdx];
-      const hussainOutbound = prices.hussainOutbound[startMonthKey][startIdx];
-      const hussainReturn = prices.hussainReturn[endMonthKey][endIdx];
+
+      const hasanOutbound = roundPrices ? roundToNearest500(prices.hasanOutbound[startMonthKey][startIdx]) : prices.hasanOutbound[startMonthKey][startIdx];
+      const hasanReturn = roundPrices ? roundToNearest500(prices.hasanReturn[endMonthKey][endIdx]) : prices.hasanReturn[endMonthKey][endIdx];
+      const hatimOutbound = roundPrices ? roundToNearest500(prices.hatimOutbound[startMonthKey][startIdx]) : prices.hatimOutbound[startMonthKey][startIdx];
+      const hatimReturn = roundPrices ? roundToNearest500(prices.hatimReturn[endMonthKey][endIdx]) : prices.hatimReturn[endMonthKey][endIdx];
+      const hussainOutbound = roundPrices ? roundToNearest500(prices.hussainOutbound[startMonthKey][startIdx]) : prices.hussainOutbound[startMonthKey][startIdx];
+      const hussainReturn = roundPrices ? roundToNearest500(prices.hussainReturn[endMonthKey][endIdx]) : prices.hussainReturn[endMonthKey][endIdx];
   
       const startDateObj = new Date(2025, startDate <= 30 ? 3 : 4, startDate <= 30 ? startDate : startDate - 30);
       const endDateObj = new Date(2025, endDate <= 30 ? 3 : 4, endDate <= 30 ? endDate : endDate - 30);
@@ -318,8 +323,6 @@ const TripAnalysisTable: React.FC = () => {
       endDateObj.setHours(12, 0, 0, 0);
   
       const specialDays = getSpecialDays(startDateObj, endDateObj);
-  
-      // ... rest of your existing code
 
       const germanLeaves = getWorkingDays(startDateObj, endDateObj, specialDays.holidays.german);
       const indianLeaves = getWorkingDays(
@@ -377,7 +380,7 @@ const TripAnalysisTable: React.FC = () => {
   
       return hasanConstraint && hatimConstraint && hussainConstraint;
     });
-  }, [selectedDuration, debouncedMaxPriceHasan, debouncedMaxPriceHatim, debouncedMaxPriceHussain]);
+  }, [selectedDuration, debouncedMaxPriceHasan, debouncedMaxPriceHatim, debouncedMaxPriceHussain, roundPrices]);
   
   const sortedOptions = _.orderBy(
     filteredOptions,
@@ -411,6 +414,15 @@ const TripAnalysisTable: React.FC = () => {
                   <option key={days} value={days}>{days} days</option>
                 ))}
               </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-normal">Round Prices:</span>
+              <input 
+                type="checkbox" 
+                checked={roundPrices}
+                onChange={() => setRoundPrices(!roundPrices)}
+                className="form-checkbox h-4 w-4"
+              />
             </div>
           </div>
           
