@@ -1,7 +1,26 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ArrowUpDown } from 'lucide-react';
 import _, { debounce } from 'lodash';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 // Interface definitions
 interface DateScheduleProps {
@@ -414,6 +433,22 @@ const TripAnalysisTable: React.FC = () => {
     [sortDirection]
   );
 
+  const getRowClassName = (option: Option): string => {
+    if (option.holidays.german.length > 0 && option.holidays.indian.length > 0) {
+      return 'bg-green-50 hover:bg-green-100';
+    }
+    if (option.holidays.german.length > 0) {
+      return 'bg-blue-50 hover:bg-blue-100';
+    }
+    if (option.holidays.indian.length > 0) {
+      return 'bg-yellow-50 hover:bg-yellow-100';
+    }
+    if (option.hybridDays.hatim.length > 0) {
+      return 'bg-purple-50 hover:bg-purple-100';
+    }
+    return 'hover:bg-gray-50';
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -517,102 +552,89 @@ const TripAnalysisTable: React.FC = () => {
           </span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="p-2 text-left cursor-pointer" onClick={() => handleSort('dates')}>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[250px] cursor-pointer" onClick={() => handleSort('dates')}>
                   <div className="flex items-center gap-2">
                     Dates
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
-                </th>
-                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('duration')}>
+                </TableHead>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
                   <div className="flex items-center justify-end gap-2">
                     Duration
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
-                </th>
-                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('hasan')}>
+                </TableHead>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
                   <div className="flex items-center justify-end gap-2">
                     Hasan Cost
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
-                </th>
-                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('hatim')}>
+                </TableHead>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
                   <div className="flex items-center justify-end gap-2">
                     Hatim Cost
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
-                </th>
-                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('hussain')}>
+                </TableHead>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
                   <div className="flex items-center justify-end gap-2">
                     Hussain Cost
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
-                </th>
-                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('total')}>
+                </TableHead>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
                   <div className="flex items-center justify-end gap-2">
                     Total Cost
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
-                </th>
-                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('leaves')}>
+                </TableHead>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
                   <div className="flex items-center justify-end gap-2">
                     Leave Days
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {sortedOptions.map((option, index) => (
-                <tr key={index} className={`border-b hover:bg-gray-50 ${option.holidays.german.length > 0 && option.holidays.indian.length > 0 ? 'bg-green-50' : option.holidays.german.length > 0 ? 'bg-blue-50' : option.holidays.indian.length > 0 ? 'bg-yellow-50' : option.hybridDays.hatim.length > 0 ? 'bg-purple-50' : ''}`}>
-                  <td className="p-2">
-                    <div className="flex items-center justify-between cursor-pointer"
-                        onClick={() => toggleRowExpansion(index)}>
-                      <span>{option.dates.start} - {option.dates.end}</span>
-                      <span className="text-gray-500">
-                        {expandedRows.has(index) ? '▼' : '▶'}
-                      </span>
-                    </div>
-                    {!expandedRows.has(index) && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        <span className="mr-2">🗓️ Weekends: {option.weekends} days</span>
-                        {option.holidays.german.length > 0 && (
-                          <span className="mr-2">🇩🇪 German holidays: {option.holidays.german.length}</span>
-                        )}
-                        {option.holidays.indian.length > 0 && (
-                          <span className="mr-2">🇮🇳 Indian holidays: {option.holidays.indian.length}</span>
-                        )}
-                        {option.hybridDays.hatim.length > 0 && (
-                          <span>💻 Hatim hybrid day</span>
-                        )}
-                      </div>
-                    )}
-                    {expandedRows.has(index) && (
-                    <DateSchedule
-                      startDate={new Date(2025, option.dates.start.includes('April') ? 3 : 4, parseInt(option.dates.start.split(' ')[1]))}
-                      endDate={new Date(2025, option.dates.end.includes('April') ? 3 : 4, parseInt(option.dates.end.split(' ')[1]))}
-                      holidays={option.holidays}
-                      hybridDays={option.hybridDays}
-                    />
-                  )}
-                  </td>
-                  <td className="p-2 text-right">{option.duration} days</td>
-                  <td className="p-2 text-right">₹{option.costs.hasan.toLocaleString()}</td>
-                  <td className="p-2 text-right">₹{option.costs.hatim.toLocaleString()}</td>
-                  <td className="p-2 text-right">₹{option.costs.hussain.toLocaleString()}</td>
-                  <td className="p-2 text-right">₹{option.costs.total.toLocaleString()}</td>
-                  <td className="p-2 text-right">
+                <TableRow key={index} className={getRowClassName(option)}>
+                  <TableCell className="font-medium">
+                    <Collapsible open={expandedRows.has(index)} onOpenChange={() => toggleRowExpansion(index)}>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full">
+                        <span>{option.dates.start} - {option.dates.end}</span>
+                        <span className="text-gray-500">
+                          {expandedRows.has(index) ? '▼' : '▶'}
+                        </span>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <DateSchedule
+                          startDate={new Date(2025, option.dates.start.includes('April') ? 3 : 4, parseInt(option.dates.start.split(' ')[1]))}
+                          endDate={new Date(2025, option.dates.end.includes('April') ? 3 : 4, parseInt(option.dates.end.split(' ')[1]))}
+                          holidays={option.holidays}
+                          hybridDays={option.hybridDays}
+                        />
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </TableCell>
+                  <TableCell className="text-right">{option.duration} days</TableCell>
+                  <TableCell className="text-right">₹{option.costs.hasan.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">₹{option.costs.hatim.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">₹{option.costs.hussain.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">₹{option.costs.total.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">
                     <div className="flex flex-col items-end">
                       <span>🇩🇪 {option.leaves.german} days</span>
                       <span>🇮🇳 {option.leaves.indian} days</span>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {sortedOptions.length === 0 && (
             <div className="text-center py-4 text-gray-500">
               No trip options match the current constraints.
