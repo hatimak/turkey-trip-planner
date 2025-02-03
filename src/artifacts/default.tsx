@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ArrowUpDown } from 'lucide-react';
 import _, { debounce } from 'lodash';
 import {
@@ -229,6 +229,23 @@ const TripAnalysisTable: React.FC = () => {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [roundPrices, setRoundPrices] = useState<boolean>(true);
 
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [isLoadingRate, setIsLoadingRate] = useState(true);
+  const [selectedCurrency, setSelectedCurrency] = useState<'INR' | 'EUR'>('INR');
+
+  useEffect(() => {
+    fetch('https://api.exchangerate-api.com/v4/latest/INR')
+      .then(response => response.json())
+      .then(data => {
+        setExchangeRate(data.rates.EUR);
+        setIsLoadingRate(false);
+      })
+      .catch(error => {
+        console.error('Error fetching exchange rate:', error);
+        setIsLoadingRate(false);
+      });
+  }, []);
+
   const debouncedSetPrice = useCallback(
     debounce((setter: (value: string) => void, value: string) => {
       setter(value);
@@ -299,18 +316,18 @@ const TripAnalysisTable: React.FC = () => {
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
-    
+
     const startStr = toDateString(start);
     const endStr = toDateString(end);
-    
+
     const germanHolidays = HOLIDAYS.german.filter(holiday => 
       holiday >= startStr && holiday <= endStr
     );
-    
+
     const indianHolidays = HOLIDAYS.indian.filter(holiday => 
       holiday >= startStr && holiday <= endStr
     );
-  
+
     const hatimHybridDays = HYBRID_DAYS.hatim.filter(day => 
       day >= startStr && day <= endStr
     );
@@ -325,7 +342,7 @@ const TripAnalysisTable: React.FC = () => {
       }
     };
   };
-  
+
   const getWorkingDays = (
     startDate: Date, 
     endDate: Date, 
@@ -354,7 +371,21 @@ const TripAnalysisTable: React.FC = () => {
     
     return count;
   };
-  
+
+  const convertPrice = useCallback((priceInINR: number): number => {
+    if (selectedCurrency === 'INR' || !exchangeRate) return priceInINR;
+    return Number((priceInINR * exchangeRate).toFixed(2));
+  }, [selectedCurrency, exchangeRate]);
+
+  const formatPrice = useCallback((price: number): string => {
+    const symbol = selectedCurrency === 'INR' ? '₹' : '€';
+    const convertedPrice = convertPrice(price);
+    return `${symbol}${convertedPrice.toLocaleString(selectedCurrency === 'INR' ? 'en-IN' : 'de-DE', {
+      minimumFractionDigits: selectedCurrency === 'EUR' ? 2 : 0,
+      maximumFractionDigits: selectedCurrency === 'EUR' ? 2 : 0,
+    })}`;
+  }, [selectedCurrency, convertPrice]);
+
   const getWeekendCount = (startDate: Date, endDate: Date): number => {
     let count = 0;
     const curDate = new Date(startDate);
@@ -453,9 +484,9 @@ const TripAnalysisTable: React.FC = () => {
   const filteredOptions = useMemo(() => {
     const options: Option[] = generateDateAnalysis();
     return options.filter(option => {
-      const hasanConstraint = maxPriceHasan === '' || option.costs.hasan <= Number(maxPriceHasan);
-      const hatimConstraint = maxPriceHatim === '' || option.costs.hatim <= Number(maxPriceHatim);
-      const hussainConstraint = maxPriceHussain === '' || option.costs.hussain <= Number(maxPriceHussain);
+      const hasanConstraint = maxPriceHasan === '' || convertPrice(option.costs.hasan) <= Number(maxPriceHasan);
+      const hatimConstraint = maxPriceHatim === '' || convertPrice(option.costs.hatim) <= Number(maxPriceHatim);
+      const hussainConstraint = maxPriceHussain === '' || convertPrice(option.costs.hussain) <= Number(maxPriceHussain);
   
       return hasanConstraint && hatimConstraint && hussainConstraint;
     });
@@ -464,7 +495,9 @@ const TripAnalysisTable: React.FC = () => {
     debouncedMaxPriceHasan, 
     debouncedMaxPriceHatim, 
     debouncedMaxPriceHussain, 
-    roundPrices
+    roundPrices,
+    selectedCurrency,
+    exchangeRate
   ]);
   
   const sortedOptions = _.orderBy(
@@ -474,13 +507,14 @@ const TripAnalysisTable: React.FC = () => {
         return option.dates.start;
       }
       if (sortField === 'leaves') {
-        // Sort by total leaves, then by German leaves as tiebreaker
         return (option.leaves.german + option.leaves.indian) * 100 + option.leaves.german;
       }
       if (sortField === 'duration') {
         return option.duration;
       }
-      return option.costs[sortField as keyof typeof option.costs];
+      // Convert prices for sorting if needed
+      const price = option.costs[sortField as keyof typeof option.costs];
+      return convertPrice(price);
     }],
     [sortDirection]
   );
@@ -508,6 +542,32 @@ const TripAnalysisTable: React.FC = () => {
         <CardDescription>
           Analyze and compare different trip options across multiple parameters
         </CardDescription>
+        <div className="mt-2 flex items-center justify-between">
+          <div className="text-sm">
+            {isLoadingRate ? (
+              <span className="text-gray-500">Loading exchange rate...</span>
+            ) : exchangeRate ? (
+              <div className="flex items-center gap-2 text-gray-600">
+                <span>Current Exchange Rate:</span>
+                <span className="font-medium">
+                  {selectedCurrency === 'INR' 
+                    ? `1 INR = ${exchangeRate.toFixed(3)} EUR`
+                    : `1 EUR = ${(1/exchangeRate).toFixed(2)} INR`}
+                </span>
+              </div>
+            ) : (
+              <span className="text-red-500">Failed to load exchange rate</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="currency-toggle"
+              checked={selectedCurrency === 'EUR'}
+              onCheckedChange={(checked) => setSelectedCurrency(checked ? 'EUR' : 'INR')}
+            />
+            <Label htmlFor="currency-toggle">Show prices in {selectedCurrency === 'INR' ? 'EUR' : 'INR'}</Label>
+          </div>
+        </div>
         
         <div className="space-y-6 pt-4">
           {/* Duration Selection */}
@@ -544,10 +604,13 @@ const TripAnalysisTable: React.FC = () => {
                 type="number"
                 value={maxPriceHasan}
                 onChange={(e) => {
-                  setMaxPriceHasan(e.target.value);
-                  debouncedSetPrice(setDebouncedMaxPriceHasan, e.target.value);
+                  const value = e.target.value;
+                  // Store all constraints in INR internally
+                  const priceInINR = selectedCurrency === 'EUR' && exchangeRate  ? Number(value) / exchangeRate : Number(value);
+                  setMaxPriceHasan(value);
+                  debouncedSetPrice(setDebouncedMaxPriceHasan, String(priceInINR));
                 }}
-                placeholder="No limit"
+                placeholder={`No limit (${selectedCurrency})`}
                 className="w-full"
               />
             </div>
@@ -559,10 +622,13 @@ const TripAnalysisTable: React.FC = () => {
                 type="number"
                 value={maxPriceHatim}
                 onChange={(e) => {
-                  setMaxPriceHatim(e.target.value);
-                  debouncedSetPrice(setDebouncedMaxPriceHatim, e.target.value);
+                  const value = e.target.value;
+                  // Store all constraints in INR internally
+                  const priceInINR = selectedCurrency === 'EUR' && exchangeRate  ? Number(value) / exchangeRate : Number(value);
+                  setMaxPriceHatim(value);
+                  debouncedSetPrice(setDebouncedMaxPriceHatim, String(priceInINR));
                 }}
-                placeholder="No limit"
+                placeholder={`No limit (${selectedCurrency})`}
                 className="w-full"
               />
             </div>
@@ -574,10 +640,13 @@ const TripAnalysisTable: React.FC = () => {
                 type="number"
                 value={maxPriceHussain}
                 onChange={(e) => {
-                  setMaxPriceHussain(e.target.value);
-                  debouncedSetPrice(setDebouncedMaxPriceHussain, e.target.value);
+                  const value = e.target.value;
+                  // Store all constraints in INR internally
+                  const priceInINR = selectedCurrency === 'EUR' && exchangeRate  ? Number(value) / exchangeRate : Number(value);
+                  setMaxPriceHussain(value);
+                  debouncedSetPrice(setDebouncedMaxPriceHussain, String(priceInINR));
                 }}
-                placeholder="No limit"
+                placeholder={`No limit (${selectedCurrency})`}
                 className="w-full"
               />
             </div>
@@ -593,7 +662,9 @@ const TripAnalysisTable: React.FC = () => {
                 checked={roundPrices}
                 onCheckedChange={setRoundPrices}
               />
-              <Label htmlFor="round-prices">Round prices to nearest ₹500</Label>
+              <Label htmlFor="round-prices">
+                Round prices to nearest {selectedCurrency === 'INR' ? '₹500' : '€5'}
+              </Label>
             </div>
           </div>
 
@@ -637,25 +708,25 @@ const TripAnalysisTable: React.FC = () => {
                 </TableHead>
                 <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
                   <div className="flex items-center justify-end gap-2">
-                    Hasan Cost
+                    Hasan Cost {selectedCurrency === 'INR' ? '₹' : '€'}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
                   <div className="flex items-center justify-end gap-2">
-                    Hatim Cost
+                    Hatim Cost {selectedCurrency === 'INR' ? '₹' : '€'}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
                   <div className="flex items-center justify-end gap-2">
-                    Hussain Cost
+                    Hussain Cost {selectedCurrency === 'INR' ? '₹' : '€'}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
                   <div className="flex items-center justify-end gap-2">
-                    Total Cost
+                    Total Cost {selectedCurrency === 'INR' ? '₹' : '€'}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
@@ -689,10 +760,10 @@ const TripAnalysisTable: React.FC = () => {
                     </Collapsible>
                   </TableCell>
                   <TableCell className="text-right">{option.duration} days</TableCell>
-                  <TableCell className="text-right">₹{option.costs.hasan.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">₹{option.costs.hatim.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">₹{option.costs.hussain.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">₹{option.costs.total.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">{formatPrice(option.costs.hasan)}</TableCell>
+                  <TableCell className="text-right">{formatPrice(option.costs.hatim)}</TableCell>
+                  <TableCell className="text-right">{formatPrice(option.costs.hussain)}</TableCell>
+                  <TableCell className="text-right">{formatPrice(option.costs.total)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end">
                       <span>🇩🇪 {option.leaves.german} days</span>
