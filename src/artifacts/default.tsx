@@ -21,13 +21,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -87,87 +80,135 @@ interface Option {
 }
 
 const DateSchedule: React.FC<DateScheduleProps> = ({ startDate, endDate, holidays, hybridDays }) => {
-  const getDates = (start: Date, end: Date): Date[] => {
-    const dates: Date[] = [];
-    const currDate = new Date(start);
-    currDate.setHours(12, 0, 0, 0);
-    const lastDate = new Date(end);
-    lastDate.setHours(12, 0, 0, 0);
-    
-    while (currDate <= lastDate) {
-      dates.push(new Date(currDate));
-      currDate.setDate(currDate.getDate() + 1);
-    }
-    return dates;
-  };
+  const start = useMemo(() => new Date(startDate), [startDate]);
+  const end = useMemo(() => new Date(endDate), [endDate]);
 
-  const getDateClass = (date: Date): string => {
+  const getWeeks = useCallback(() => {
+    // Find middle week that contains the start date
+    const firstDay = new Date(start);
+    firstDay.setDate(firstDay.getDate() - firstDay.getDay() - 7); // Go back two weeks
+
+    const days: Date[] = [];
+    const currentDate = new Date(firstDay);
+
+    // Generate 28 days (4 weeks)
+    for (let i = 0; i < 28; i++) {
+      days.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Split into weeks
+    const weeks: Date[][] = [];
+    for (let i = 0; i < days.length; i += 7) {
+      weeks.push(days.slice(i, i + 7));
+    }
+
+    return weeks;
+  }, [start]);
+
+  const isDateInRange = useCallback((date: Date) => {
+    const compareDate = new Date(date);
+    const compareStart = new Date(start);
+    const compareEnd = new Date(end);
+    compareDate.setHours(0, 0, 0, 0);
+    compareStart.setHours(0, 0, 0, 0);
+    compareEnd.setHours(0, 0, 0, 0);
+    return compareDate >= compareStart && compareDate <= compareEnd;
+  }, [start, end]);
+
+  const getDateStyle = useCallback((date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const isGermanHoliday = holidays.german.includes(dateStr);
     const isIndianHoliday = holidays.indian.includes(dateStr);
     const isHybridDay = hybridDays.hatim.includes(dateStr);
-  
-    if (isWeekend) {
-      return 'bg-gray-100';
-    }
-    if (isGermanHoliday && isIndianHoliday) {
-      return 'bg-green-50';
-    }
-    if (isGermanHoliday) {
-      return 'bg-blue-50';
-    }
-    if (isIndianHoliday) {
-      return 'bg-yellow-50';
-    }
-    if (isHybridDay) {
-      return 'bg-purple-50';
-    }
-    return '';
-  };
+    const inRange = isDateInRange(date);
 
-  const getDateLabel = (date: Date): string => {
-    const dateStr = date.toISOString().split('T')[0];
-    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-    const isGermanHoliday = holidays.german.includes(dateStr);
-    const isIndianHoliday = holidays.indian.includes(dateStr);
-    const isHybridDay = hybridDays.hatim.includes(dateStr);
-  
-    if (isWeekend) {
-      return '🗓️ Weekend';
-    }
-    if (isGermanHoliday && isIndianHoliday) {
-      return '🇩🇪 🇮🇳 Holiday';
-    }
-    if (isGermanHoliday) {
-      return '🇩🇪 Holiday';
-    }
-    if (isIndianHoliday) {
-      return '🇮🇳 Holiday';
-    }
-    if (isHybridDay) {
-      return '💻 Hybrid Day';
-    }
-    return '';
-  };
+    return {
+      cellClass: `
+        relative h-12 p-1.5 border border-gray-200
+        ${inRange ? 'ring-1 ring-blue-200' : ''}
+        ${isWeekend ? 'bg-gray-50' : 'bg-white'}
+        ${inRange && isWeekend ? 'bg-gray-100' : ''}
+        ${inRange && isGermanHoliday && isIndianHoliday ? 'bg-green-50' : ''}
+        ${inRange && isGermanHoliday && !isIndianHoliday ? 'bg-blue-50' : ''}
+        ${inRange && !isGermanHoliday && isIndianHoliday ? 'bg-yellow-50' : ''}
+        ${inRange && isHybridDay ? 'bg-purple-50' : ''}
+      `,
+      textClass: `text-xs ${inRange ? 'font-medium' : 'text-gray-500'}`,
+      monthLabel: date.toLocaleString('default', { month: 'short' }),
+    };
+  }, [holidays, hybridDays, isDateInRange]);
 
-  const dates = getDates(new Date(startDate), new Date(endDate));
+  const weeks = useMemo(() => getWeeks(), [getWeeks]);
 
   return (
-    <div className="grid grid-cols-1 gap-1 mt-2">
-      {dates.map((date, idx) => (
-        <div 
-          key={idx} 
-          className={`text-xs p-1 rounded flex justify-between ${getDateClass(date)}`}
-        >
-          <span>{date.toLocaleDateString('en-US', { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric' 
-          })}</span>
-          <span>{getDateLabel(date)}</span>
+    <div className="p-4">
+      <div className="bg-white rounded-lg shadow-sm max-w-4xl mx-auto">
+        {/* Week day headers */}
+        <div className="grid grid-cols-7 border-b border-gray-200">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            <div key={day} className="py-1.5 text-center">
+              <span className="text-xs font-medium text-gray-500">
+                {day}
+              </span>
+            </div>
+          ))}
         </div>
-      ))}
+
+        {/* Calendar grid */}
+        <div className="divide-y divide-gray-200">
+          {weeks.map((week, weekIdx) => (
+            <div key={weekIdx} className="grid grid-cols-7">
+              {week.map((date, dateIdx) => {
+                const { cellClass, textClass, monthLabel } = getDateStyle(date);
+                return (
+                  <div key={dateIdx} className={cellClass}>
+                    <div className="flex justify-between">
+                      <span className={textClass}>
+                        {date.getDate() === 1 ? `${monthLabel} ${date.getDate()}` : date.getDate()}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Trip Summary */}
+      <div className="mt-4 bg-white rounded-lg shadow-sm p-3 mx-auto" style={{ width: '360px' }}>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <div className="text-xs text-gray-500">Weekends</div>
+            <div className="mt-0.5 text-sm font-medium">
+              {weeks.flat().filter(date => 
+                isDateInRange(date) && (date.getDay() === 0 || date.getDay() === 6)
+              ).length} days
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">Holidays</div>
+            <div className="mt-0.5">
+              <div className="flex items-center gap-1 text-sm font-medium">
+                <span className="text-xs">🇩🇪</span> {holidays.german.length} days
+              </div>
+              <div className="flex items-center gap-1 text-sm font-medium">
+                <span className="text-xs">🇮🇳</span> {holidays.indian.length} days
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">Hybrid Days</div>
+            <div className="mt-0.5">
+              <div className="flex items-center gap-1 text-sm font-medium">
+                <span className="text-xs">💻</span> {hybridDays.hatim.length} days
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -582,7 +623,7 @@ const TripAnalysisTable: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[250px] cursor-pointer" onClick={() => handleSort('dates')}>
+                <TableHead className="w-[400px] cursor-pointer" onClick={() => handleSort('dates')}>
                   <div className="flex items-center gap-2">
                     Dates
                     <ArrowUpDown className="h-4 w-4" />
