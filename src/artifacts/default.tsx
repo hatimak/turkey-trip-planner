@@ -12,7 +12,7 @@ import {
 import {
   Card,
   CardContent,
-  // CardDescription,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -21,6 +21,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Separator } from "@/components/ui/separator"
 
 // Interface definitions
 interface DateScheduleProps {
@@ -452,105 +463,121 @@ const TripAnalysisTable: React.FC = () => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <span>Trip Analysis Table</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-normal">Trip Durations:</span>
-              <div className="flex gap-2">
-                {[6, 7, 8, 9, 10].map((days) => (
-                  <label key={days} className="inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedDurations.includes(days)}
-                      onChange={() => {
-                        setSelectedDurations(prev => 
-                          prev.includes(days) 
-                            ? prev.filter(d => d !== days)
-                            : [...prev, days]
-                        );
-                      }}
-                      className="form-checkbox h-4 w-4 mr-1"
-                    />
-                    <span className="text-sm">{days} days</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-normal">Round Prices:</span>
-              <input 
-                type="checkbox" 
-                checked={roundPrices}
-                onChange={() => setRoundPrices(!roundPrices)}
-                className="form-checkbox h-4 w-4"
-              />
+        <CardTitle>Trip Analysis Table</CardTitle>
+        <CardDescription>
+          Analyze and compare different trip options across multiple parameters
+        </CardDescription>
+        
+        <div className="space-y-6 pt-4">
+          {/* Duration Selection */}
+          <div className="space-y-2">
+            <Label>Trip Duration</Label>
+            <div className="flex flex-wrap gap-4">
+              {[6, 7, 8, 9, 10].map((days) => (
+                <div key={days} className="flex items-center space-x-2">
+                  <Switch
+                    checked={selectedDurations.includes(days)}
+                    onCheckedChange={(checked) => {
+                      setSelectedDurations(prev =>
+                        checked
+                          ? [...prev, days]
+                          : prev.filter(d => d !== days)
+                      );
+                    }}
+                    id={`duration-${days}`}
+                  />
+                  <Label htmlFor={`duration-${days}`}>{days} days</Label>
+                </div>
+              ))}
             </div>
           </div>
-          
-          {/* Price Constraint Inputs */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Hasan Max Price (₹)</label>
-              <input 
-                type="number" 
+
+          <Separator />
+
+          {/* Price Constraints */}
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="hasan-price">Hasan Max Price (₹)</Label>
+              <Input
+                id="hasan-price"
+                type="number"
                 value={maxPriceHasan}
                 onChange={(e) => {
                   setMaxPriceHasan(e.target.value);
                   debouncedSetPrice(setDebouncedMaxPriceHasan, e.target.value);
-                }}                
+                }}
                 placeholder="No limit"
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Hatim Max Price (₹)</label>
-              <input 
-                type="number" 
+            
+            <div className="space-y-2">
+              <Label htmlFor="hatim-price">Hatim Max Price (₹)</Label>
+              <Input
+                id="hatim-price"
+                type="number"
                 value={maxPriceHatim}
                 onChange={(e) => {
                   setMaxPriceHatim(e.target.value);
                   debouncedSetPrice(setDebouncedMaxPriceHatim, e.target.value);
                 }}
                 placeholder="No limit"
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Hussain Max Price (₹)</label>
-              <input 
-                type="number" 
+            
+            <div className="space-y-2">
+              <Label htmlFor="hussain-price">Hussain Max Price (₹)</Label>
+              <Input
+                id="hussain-price"
+                type="number"
                 value={maxPriceHussain}
                 onChange={(e) => {
                   setMaxPriceHussain(e.target.value);
                   debouncedSetPrice(setDebouncedMaxPriceHussain, e.target.value);
                 }}
                 placeholder="No limit"
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full"
               />
             </div>
           </div>
-        </CardTitle>
+
+          <Separator />
+
+          {/* Additional Controls */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="round-prices"
+                checked={roundPrices}
+                onCheckedChange={setRoundPrices}
+              />
+              <Label htmlFor="round-prices">Round prices to nearest ₹500</Label>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-green-50 border border-gray-200 rounded"></div>
+              <span>Both German & Indian Holidays</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-blue-50 border border-gray-200 rounded"></div>
+              <span>German Holidays</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-yellow-50 border border-gray-200 rounded"></div>
+              <span>Indian Holidays</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-purple-50 border border-gray-200 rounded"></div>
+              <span>Hybrid Working Day</span>
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 text-sm flex gap-4">
-          <span className="inline-flex items-center">
-            <span className="w-4 h-4 mr-2 bg-green-50 border border-gray-200"></span>
-            Both German & Indian Holidays
-          </span>
-          <span className="inline-flex items-center">
-            <span className="w-4 h-4 mr-2 bg-blue-50 border border-gray-200"></span>
-            German Holidays
-          </span>
-          <span className="inline-flex items-center">
-            <span className="w-4 h-4 mr-2 bg-yellow-50 border border-gray-200"></span>
-            Indian Holidays
-          </span>
-          <span className="inline-flex items-center">
-            <span className="w-4 h-4 mr-2 bg-purple-50 border border-gray-200"></span>
-            Hybrid Working Day
-          </span>
-        </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
