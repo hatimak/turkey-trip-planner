@@ -253,8 +253,12 @@ const TripAnalysisTable: React.FC = () => {
     []
   );
 
-  const roundToNearest500 = (price: number): number => {
-    return Math.round(price / 500) * 500;
+  const roundPrice = (price: number, currency: 'INR' | 'EUR'): number => {
+    if (currency === 'INR') {
+      return Math.round(price / 500) * 500;
+    } else {
+      return Math.round(price / 5) * 5;
+    }
   };
 
   const toggleRowExpansion = (index: number): void => {
@@ -373,9 +377,13 @@ const TripAnalysisTable: React.FC = () => {
   };
 
   const convertPrice = useCallback((priceInINR: number): number => {
-    if (selectedCurrency === 'INR' || !exchangeRate) return priceInINR;
-    return Number((priceInINR * exchangeRate).toFixed(2));
-  }, [selectedCurrency, exchangeRate]);
+    if (selectedCurrency === 'INR' || !exchangeRate) {
+      return roundPrices ? roundPrice(priceInINR, 'INR') : priceInINR;
+    }
+    
+    const priceInEUR = priceInINR * exchangeRate;
+    return roundPrices ? roundPrice(priceInEUR, 'EUR') : Number(priceInEUR.toFixed(2));
+  }, [selectedCurrency, exchangeRate, roundPrices]);
 
   const formatPrice = useCallback((price: number): string => {
     const symbol = selectedCurrency === 'INR' ? '₹' : '€';
@@ -419,12 +427,12 @@ const TripAnalysisTable: React.FC = () => {
         const startMonthKey = startDate <= 30 ? 'april' : 'may';
         const endMonthKey = endDate <= 30 ? 'april' : 'may';
   
-        const hasanOutbound = roundPrices ? roundToNearest500(prices.hasanOutbound[startMonthKey][startIdx]) : prices.hasanOutbound[startMonthKey][startIdx];
-        const hasanReturn = roundPrices ? roundToNearest500(prices.hasanReturn[endMonthKey][endIdx]) : prices.hasanReturn[endMonthKey][endIdx];
-        const hatimOutbound = roundPrices ? roundToNearest500(prices.hatimOutbound[startMonthKey][startIdx]) : prices.hatimOutbound[startMonthKey][startIdx];
-        const hatimReturn = roundPrices ? roundToNearest500(prices.hatimReturn[endMonthKey][endIdx]) : prices.hatimReturn[endMonthKey][endIdx];
-        const hussainOutbound = roundPrices ? roundToNearest500(prices.hussainOutbound[startMonthKey][startIdx]) : prices.hussainOutbound[startMonthKey][startIdx];
-        const hussainReturn = roundPrices ? roundToNearest500(prices.hussainReturn[endMonthKey][endIdx]) : prices.hussainReturn[endMonthKey][endIdx];
+        const hasanOutbound = prices.hasanOutbound[startMonthKey][startIdx];
+        const hasanReturn = prices.hasanReturn[endMonthKey][endIdx];
+        const hatimOutbound = prices.hatimOutbound[startMonthKey][startIdx];
+        const hatimReturn = prices.hatimReturn[endMonthKey][endIdx];
+        const hussainOutbound = prices.hussainOutbound[startMonthKey][startIdx];
+        const hussainReturn = prices.hussainReturn[endMonthKey][endIdx];
     
         const startDateObj = new Date(2025, startDate <= 30 ? 3 : 4, startDate <= 30 ? startDate : startDate - 30);
         const endDateObj = new Date(2025, endDate <= 30 ? 3 : 4, endDate <= 30 ? endDate : endDate - 30);
