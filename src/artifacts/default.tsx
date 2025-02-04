@@ -706,25 +706,25 @@ const TripAnalysisTable: React.FC = () => {
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('hasan')}>
                   <div className="flex items-center justify-end gap-2">
                     Hasan Cost {selectedCurrency === 'INR' ? '₹' : '€'}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('hatim')}>
                   <div className="flex items-center justify-end gap-2">
                     Hatim Cost {selectedCurrency === 'INR' ? '₹' : '€'}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('hussain')}>
                   <div className="flex items-center justify-end gap-2">
                     Hussain Cost {selectedCurrency === 'INR' ? '₹' : '€'}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('duration')}>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('total')}>
                   <div className="flex items-center justify-end gap-2">
                     Total Cost {selectedCurrency === 'INR' ? '₹' : '€'}
                     <ArrowUpDown className="h-4 w-4" />
